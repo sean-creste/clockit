@@ -12,9 +12,13 @@ All notable changes to clockit are documented here (newest date on top).
 - Branded "hello" landing page; deployed to Cloudflare Workers at https://clockit.sean-dahan.workers.dev.
 - Initial database schema migration (`supabase/migrations/`): enums (`app_role`, `engagement_type`, `invoice_status`) + tables `resources`, `clients`, `work_streams`, `invoices`, `time_entries` (invoices before time_entries for the FK); added `resources.email` for auth↔resource linking; `hours` check (`0 < hours ≤ 24`); indexes on `time_entries(work_stream_id, invoice_id, entry_date)` and `work_streams(client_id)`.
 - Idempotent `supabase/seed.sql`: two founding-partner admins, demo client Acme Studio with two work streams. Created the Supabase `clockit` project (Creste org, `us-west-1`) and applied the migration + seed.
+- Supabase email auth: `/login` route (sign in/up/out server actions, no `<form>`), route-protecting middleware (session refresh via `@supabase/ssr`), and a server-side service-role admin client.
+- Link `auth.users` → `resources` by email on first sign-in (idempotent, service-role).
+- RLS (`supabase/migrations/…_rls_policies.sql`): schema-qualified `public.current_role()` helper + policies — members read/write only their own *uninvoiced* `time_entries` and cannot see `clients`/`work_streams`/`invoices`; admins full access; `cost_rate` hidden from client roles via column privileges (service-role only).
 
 ### Changed
 - Restored the project `README.md` (create-next-app had overwritten it) and documented dev/preview/deploy.
+- Home page shows the signed-in resource + role with sign-out; seed adds one `member` resource (`dev@creste.dev`) so member-scoped RLS can be exercised.
 
 ### Removed
 - Unused create-next-app placeholder SVGs from `public/`.
