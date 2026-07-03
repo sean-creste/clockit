@@ -2,6 +2,14 @@
 
 All notable changes to clockit are documented here (newest date on top).
 
+## 2026-07-03
+
+### Added
+- Imported Sean's historical hours from the **TimeSheet** Google Sheet: client **Glocod** (ILS, hourly), 5 keyword-inferred work streams (Ingestion Engine, Meetings, Frontend, Data Sources, DevOps & Deploy), 9 monthly invoices (`CRESTE-2025-001/002`, `CRESTE-2026-001…007`, `issued`), and **253 `time_entries`** (951h, ₪142,650) with `bill_rate = cost_rate = ₪150` snapshotted and each stamped to its month's invoice. Idempotent SQL + provenance under `supabase/imports/`.
+
+### Removed
+- Phase-3 RLS test artifacts (`CRESTE-2026-TEST` invoice + member test entries).
+
 ## 2026-07-02
 
 ### Added
