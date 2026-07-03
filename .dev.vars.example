@@ -1,0 +1,13 @@
+# Local Workers-runtime dev vars — read by `wrangler dev` (i.e. `npm run preview`).
+# Copy this file to `.dev.vars` and fill in real values. NEVER commit `.dev.vars`.
+# See ARCHITECTURE.md §10.
+
+# Public — safe to expose to the browser:
+NEXT_PUBLIC_SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
+
+# Server-only — NEVER shipped to the browser:
+SUPABASE_SERVICE_ROLE_KEY="YOUR_SUPABASE_SERVICE_ROLE_KEY"
+
+# Tells the Workers runtime to load .env.development files during local preview:
+NEXTJS_ENV="development"
