@@ -1,86 +1,71 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { brand } from "@/lib/brand";
+import { hoursLabel, money } from "@/lib/format";
 import { addEntry } from "./actions";
 
 type Stream = { id: string; name: string; clientName: string };
 type Entry = {
   id: string;
-  entryDate: string;
   hours: number;
   description: string;
   billable: boolean;
   invoiced: boolean;
   streamName: string;
   clientName: string;
+  currency: string;
+  billRate: number;
 };
 
-function todayISO() {
-  const d = new Date();
-  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
-    .toISOString()
-    .slice(0, 10);
-}
-
-const fmtDay = (iso: string) =>
-  new Date(iso + "T00:00:00Z").toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-
-export function TimeClient({
-  resourceName,
-  streams,
+export function TimeDay({
+  day,
+  weekday,
+  dateLabel,
+  prevDate,
+  nextDate,
+  today,
+  dayTotal,
   entries,
-  weekStart,
-  weekEnd,
+  streams,
+  isAdmin,
 }: {
-  resourceName: string;
-  streams: Stream[];
+  day: string;
+  weekday: string;
+  dateLabel: string;
+  prevDate: string;
+  nextDate: string;
+  today: string;
+  dayTotal: number;
   entries: Entry[];
-  weekStart: string;
-  weekEnd: string;
+  streams: Stream[];
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
-
-  const [entryDate, setEntryDate] = useState(todayISO());
-  const [workStreamId, setWorkStreamId] = useState(streams[0]?.id ?? "");
-  const [hours, setHours] = useState("");
+  const [streamId, setStreamId] = useState(streams[0]?.id ?? "");
   const [description, setDescription] = useState("");
-  const [billable, setBillable] = useState(true);
+  const [hours, setHours] = useState("");
 
-  const { byDay, weekTotal } = useMemo(() => {
-    const map = new Map<string, Entry[]>();
-    let total = 0;
-    for (const e of entries) {
-      total += e.hours;
-      const arr = map.get(e.entryDate) ?? [];
-      arr.push(e);
-      map.set(e.entryDate, arr);
-    }
-    const byDay = [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-    return { byDay, weekTotal: total };
-  }, [entries]);
+  const grid = isAdmin
+    ? "180px 1fr 70px 90px 44px"
+    : "180px 1fr 70px 44px";
 
-  function submit() {
+  function add() {
     setMsg(null);
     const h = Number(hours);
-    if (!workStreamId) return setMsg("Pick a work stream.");
+    if (!streamId) return setMsg("Pick a work stream.");
     if (!(h > 0 && h <= 24)) return setMsg("Hours must be between 0 and 24.");
     start(async () => {
       const res = await addEntry({
-        entryDate,
-        workStreamId,
+        entryDate: day,
+        workStreamId: streamId,
         hours: h,
         description,
-        billable,
+        billable: true,
       });
       if (res?.error) setMsg(res.error);
       else {
@@ -91,129 +76,228 @@ export function TimeClient({
     });
   }
 
-  const input =
-    "rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-white outline-none focus:border-zinc-400";
+  const navLink = (href: string, label: string) => (
+    <Link
+      href={href}
+      className="inline-flex h-7 w-7 items-center justify-center rounded"
+      style={{ color: "rgba(26,26,26,.5)", border: "1px solid rgba(26,26,26,.12)" }}
+    >
+      {label}
+    </Link>
+  );
 
   return (
-    <main className="min-h-screen p-6 md:p-10" style={{ backgroundColor: brand.ink }}>
-      <div className="mx-auto max-w-3xl">
-        <header className="mb-6 flex items-center justify-between">
+    <div>
+      {/* day nav + total */}
+      <div className="flex items-end justify-between px-9 pb-5 pt-7">
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1.5">
+            {navLink(`/time?date=${prevDate}`, "‹")}
+            {navLink(`/time?date=${nextDate}`, "›")}
+          </div>
           <div>
-            <h1 className="text-xl font-semibold text-white" style={{ letterSpacing: "0.2em" }}>
-              {brand.wordmark}
-            </h1>
-            <p className="text-sm text-zinc-400">Log time — {resourceName}</p>
+            <div
+              className="uppercase"
+              style={{ fontSize: 11, letterSpacing: ".12em", color: "rgba(26,26,26,.4)" }}
+            >
+              {weekday}
+              {day !== today && (
+                <Link href="/time" className="ml-2 normal-case underline" style={{ letterSpacing: 0 }}>
+                  today
+                </Link>
+              )}
+            </div>
+            <div className="font-display" style={{ fontSize: 30, lineHeight: 1.1, marginTop: 2 }}>
+              {dateLabel}
+            </div>
           </div>
-          <Link href="/" className="text-sm text-zinc-400 underline">
-            Home
-          </Link>
-        </header>
+        </div>
+        <div className="text-right">
+          <div
+            className="uppercase"
+            style={{ fontSize: 11, letterSpacing: ".12em", color: "rgba(26,26,26,.4)" }}
+          >
+            Logged
+          </div>
+          <div
+            className="font-display"
+            style={{ fontSize: 30, lineHeight: 1.1, marginTop: 2, color: brand.oxblood }}
+          >
+            {hoursLabel(dayTotal)}
+            <span style={{ fontSize: 16, color: "rgba(26,26,26,.4)" }}>h</span>
+          </div>
+        </div>
+      </div>
 
-        {/* Entry form — no <form>, handlers only */}
-        <section className="rounded-xl border border-zinc-800 bg-black/30 p-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-xs text-zinc-400">
-              Date
-              <input type="date" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} className={input} />
-            </label>
-            <label className="flex flex-col gap-1 text-xs text-zinc-400">
-              Work stream
-              <select value={workStreamId} onChange={(e) => setWorkStreamId(e.target.value)} className={input}>
-                {streams.length === 0 && <option value="">No streams available</option>}
-                {streams.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.clientName} — {s.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-xs text-zinc-400">
-              Hours
-              <input
-                type="number"
-                step="0.25"
-                min="0"
-                max="24"
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
-                placeholder="e.g. 2.5"
-                className={input}
-              />
-            </label>
-            <label className="flex items-end gap-2 text-sm text-zinc-300">
-              <input type="checkbox" checked={billable} onChange={(e) => setBillable(e.target.checked)} className="h-4 w-4" />
-              Billable
-            </label>
-            <label className="flex flex-col gap-1 text-xs text-zinc-400 sm:col-span-2">
-              Description
-              <input
-                type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="What did you work on?"
-                className={input}
-              />
-            </label>
+      {/* column header */}
+      <div
+        className="grid px-9 pb-2 uppercase"
+        style={{
+          gridTemplateColumns: grid,
+          columnGap: 16,
+          fontSize: 9.5,
+          letterSpacing: ".1em",
+          color: "rgba(26,26,26,.4)",
+        }}
+      >
+        <div>Client / stream</div>
+        <div>Description</div>
+        <div className="text-right">Hours</div>
+        {isAdmin && <div className="text-right">Amount</div>}
+        <div />
+      </div>
+
+      {/* entries */}
+      <div style={{ borderTop: "1px solid rgba(26,26,26,.1)" }}>
+        {entries.length === 0 && (
+          <div className="px-9 py-6 text-sm" style={{ color: "rgba(26,26,26,.4)" }}>
+            No entries logged this day.
           </div>
-          {msg && <p className="mt-3 text-sm text-amber-400">{msg}</p>}
+        )}
+        {entries.map((e) => (
+          <div
+            key={e.id}
+            className="grid items-center px-9"
+            style={{
+              gridTemplateColumns: grid,
+              columnGap: 16,
+              padding: "16px 36px",
+              paddingLeft: 36,
+              paddingRight: 36,
+              borderBottom: "1px solid rgba(26,26,26,.07)",
+              opacity: e.invoiced ? 0.6 : 1,
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 12.5, fontWeight: 500 }}>{e.clientName}</div>
+              <div style={{ fontSize: 11, color: brand.oxblood, marginTop: 2 }}>{e.streamName}</div>
+            </div>
+            <div style={{ fontSize: 12.5, color: "rgba(26,26,26,.7)", lineHeight: 1.45 }}>
+              {e.description || <span style={{ color: "rgba(26,26,26,.35)" }}>—</span>}
+              {e.invoiced && (
+                <span
+                  className="ml-2 uppercase"
+                  style={{
+                    fontFamily: "var(--font-plex)",
+                    fontSize: 9.5,
+                    letterSpacing: ".06em",
+                    color: brand.oxblood,
+                    border: "1px solid rgba(74,14,28,.3)",
+                    borderRadius: 3,
+                    padding: "1px 5px",
+                  }}
+                >
+                  Billed
+                </span>
+              )}
+              {!e.billable && (
+                <span className="ml-2" style={{ fontSize: 10, color: "rgba(26,26,26,.4)" }}>
+                  non-billable
+                </span>
+              )}
+            </div>
+            <div
+              className="text-right"
+              style={{ fontFamily: "var(--font-plex)", fontSize: 13 }}
+            >
+              {hoursLabel(e.hours)}
+            </div>
+            {isAdmin && (
+              <div
+                className="text-right"
+                style={{ fontFamily: "var(--font-plex)", fontSize: 12.5, color: "rgba(26,26,26,.6)" }}
+              >
+                {money(e.hours * e.billRate, e.currency)}
+              </div>
+            )}
+            <div className="text-right" style={{ color: "rgba(26,26,26,.3)", fontSize: 14 }}>
+              {e.invoiced ? "🔒" : "⋯"}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* add row */}
+      <div
+        className="grid items-center"
+        style={{
+          gridTemplateColumns: grid,
+          columnGap: 16,
+          padding: "14px 36px",
+          background: "rgba(74,14,28,.035)",
+        }}
+      >
+        <select
+          value={streamId}
+          onChange={(e) => setStreamId(e.target.value)}
+          style={{
+            fontSize: 12,
+            background: "transparent",
+            border: "1px solid rgba(26,26,26,.15)",
+            borderRadius: 5,
+            padding: "7px 8px",
+            color: brand.ink,
+          }}
+        >
+          {streams.length === 0 && <option value="">No streams</option>}
+          {streams.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.clientName} · {s.name}
+            </option>
+          ))}
+        </select>
+        <input
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="What did you work on?"
+          style={{
+            fontSize: 12.5,
+            background: "transparent",
+            border: "1px solid rgba(26,26,26,.15)",
+            borderRadius: 5,
+            padding: "8px 10px",
+            color: brand.ink,
+            outline: "none",
+          }}
+        />
+        <input
+          value={hours}
+          onChange={(e) => setHours(e.target.value)}
+          placeholder="0.0"
+          inputMode="decimal"
+          className="text-right"
+          style={{
+            fontFamily: "var(--font-plex)",
+            fontSize: 13,
+            background: "transparent",
+            border: "1px solid rgba(26,26,26,.15)",
+            borderRadius: 5,
+            padding: "8px 10px",
+            color: brand.ink,
+            outline: "none",
+            width: "100%",
+          }}
+        />
+        {isAdmin && <div />}
+        <div className="text-right">
           <button
             type="button"
-            onClick={submit}
+            onClick={add}
             disabled={pending || streams.length === 0}
-            className="mt-4 rounded-md px-4 py-2 font-medium text-white disabled:opacity-60"
-            style={{ backgroundColor: brand.oxblood }}
+            className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-[5px] disabled:opacity-50"
+            style={{ background: brand.oxblood, color: brand.light, fontSize: 16 }}
+            title="Add entry"
           >
-            {pending ? "Adding…" : "Add entry"}
+            +
           </button>
-        </section>
-
-        {/* This week */}
-        <section className="mt-8">
-          <div className="mb-3 flex items-center justify-between border-b border-zinc-800 pb-2">
-            <h2 className="text-sm uppercase tracking-wide text-zinc-400">
-              This week · {fmtDay(weekStart)} – {fmtDay(weekEnd)}
-            </h2>
-            <span className="text-sm text-zinc-300">
-              Total <span className="font-semibold text-white">{weekTotal}</span> h
-            </span>
-          </div>
-
-          {byDay.length === 0 && <p className="text-sm text-zinc-500">No entries yet this week.</p>}
-
-          {byDay.map(([day, list]) => {
-            const dayTotal = list.reduce((s, e) => s + e.hours, 0);
-            return (
-              <div key={day} className="mb-4">
-                <div className="mb-1 flex items-center justify-between text-sm">
-                  <span className="font-medium text-zinc-200">{fmtDay(day)}</span>
-                  <span className="text-zinc-400">{dayTotal} h</span>
-                </div>
-                <ul className="divide-y divide-zinc-800 rounded-lg border border-zinc-800">
-                  {list.map((e) => (
-                    <li key={e.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-                      <div className="min-w-0">
-                        <div className="truncate text-zinc-200">
-                          {e.description || <span className="text-zinc-500">—</span>}
-                        </div>
-                        <div className="text-xs text-zinc-500">
-                          {e.clientName} · {e.streamName}
-                          {!e.billable && " · non-billable"}
-                          {e.invoiced && (
-                            <span className="ml-2 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-zinc-400">
-                              invoiced · read-only
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <span className="shrink-0 tabular-nums text-zinc-200">{e.hours} h</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-        </section>
+        </div>
       </div>
-    </main>
+
+      {msg && (
+        <div className="px-9 py-3 text-sm" style={{ color: brand.open }}>
+          {msg}
+        </div>
+      )}
+    </div>
   );
 }
