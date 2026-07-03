@@ -1,15 +1,24 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Instrument_Serif, Archivo, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const instrument = Instrument_Serif({
+  weight: "400",
+  style: ["normal", "italic"],
   subsets: ["latin"],
+  variable: "--font-instrument",
+  display: "swap",
 });
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const archivo = Archivo({
   subsets: ["latin"],
+  variable: "--font-archivo",
+  display: "swap",
+});
+const plexMono = IBM_Plex_Mono({
+  weight: ["400", "500", "600"],
+  subsets: ["latin"],
+  variable: "--font-plex",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -25,9 +34,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${instrument.variable} ${archivo.variable} ${plexMono.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full">{children}</body>
     </html>
   );
 }

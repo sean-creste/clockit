@@ -1,20 +1,18 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { AppShell } from "@/components/app-shell";
 import { brand } from "@/lib/brand";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { TimeClient } from "./time-client";
+import { todayISO, addDaysISO, dayParts } from "@/lib/format";
+import { TimeDay } from "./time-client";
 
-// Monday..Sunday week containing `d` (as YYYY-MM-DD strings).
-function weekBounds(d: Date) {
-  const day = (d.getUTCDay() + 6) % 7; // 0 = Monday
-  const start = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day));
-  const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate() + 6));
-  const iso = (x: Date) => x.toISOString().slice(0, 10);
-  return { start: iso(start), end: iso(end) };
-}
-
-export default async function TimePage() {
+export default async function TimePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string }>;
+}) {
+  const sp = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -30,12 +28,22 @@ export default async function TimePage() {
 
   if (!resource) {
     return (
-      <main className="min-h-screen p-8" style={{ backgroundColor: brand.ink }}>
-        <p className="text-amber-400">No resource is linked to your account yet.</p>
-        <Link href="/" className="text-zinc-300 underline">Home</Link>
+      <main className="flex min-h-screen items-center justify-center p-8 text-center">
+        <div>
+          <p className="mb-3" style={{ color: brand.open }}>
+            No resource is linked to your account yet.
+          </p>
+          <Link href="/" className="text-sm underline" style={{ color: "rgba(26,26,26,.5)" }}>
+            Home
+          </Link>
+        </div>
       </main>
     );
   }
+
+  const role = resource.role as "admin" | "member";
+  const day =
+    sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : todayISO();
 
   // Dropdown: active streams on active clients this resource has worked with.
   const { data: used } = await admin
@@ -53,7 +61,7 @@ export default async function TimePage() {
     .eq("active", true);
   const streams = (allStreams ?? [])
     .filter((s) => {
-      const c = s.clients as { name?: string; active?: boolean } | null;
+      const c = s.clients as { active?: boolean } | null;
       return c?.active && workedClientIds.has(s.client_id as string);
     })
     .map((s) => ({
@@ -63,37 +71,48 @@ export default async function TimePage() {
     }))
     .sort((a, b) => (a.clientName + a.name).localeCompare(b.clientName + b.name));
 
-  // This week's entries for this resource.
-  const { start, end } = weekBounds(new Date());
+  // Entries for the selected day.
   const { data: rows } = await admin
     .from("time_entries")
-    .select("id, entry_date, hours, description, billable, invoice_id, work_streams(name, clients(name))")
+    .select("id, hours, description, billable, invoice_id, bill_rate, work_streams(name, clients(name, currency))")
     .eq("resource_id", resource.id)
-    .gte("entry_date", start)
-    .lte("entry_date", end)
-    .order("entry_date", { ascending: true });
+    .eq("entry_date", day)
+    .order("created_at", { ascending: true });
 
   const entries = (rows ?? []).map((r) => {
-    const ws = r.work_streams as { name?: string; clients?: { name?: string } } | null;
+    const ws = r.work_streams as
+      | { name?: string; clients?: { name?: string; currency?: string } }
+      | null;
     return {
       id: r.id as string,
-      entryDate: r.entry_date as string,
       hours: Number(r.hours),
       description: (r.description as string) ?? "",
       billable: Boolean(r.billable),
       invoiced: r.invoice_id != null,
       streamName: ws?.name ?? "",
       clientName: ws?.clients?.name ?? "",
+      currency: ws?.clients?.currency ?? "USD",
+      billRate: Number(r.bill_rate),
     };
   });
 
+  const dayTotal = entries.reduce((s, e) => s + e.hours, 0);
+  const { weekday, date } = dayParts(day);
+
   return (
-    <TimeClient
-      resourceName={resource.name as string}
-      streams={streams}
-      entries={entries}
-      weekStart={start}
-      weekEnd={end}
-    />
+    <AppShell active="time" section="time" userName={resource.name} role={role}>
+      <TimeDay
+        day={day}
+        weekday={weekday}
+        dateLabel={date}
+        prevDate={addDaysISO(day, -1)}
+        nextDate={addDaysISO(day, 1)}
+        today={todayISO()}
+        dayTotal={dayTotal}
+        entries={entries}
+        streams={streams}
+        isAdmin={role === "admin"}
+      />
+    </AppShell>
   );
 }
