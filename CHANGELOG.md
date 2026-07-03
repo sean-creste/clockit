@@ -9,6 +9,8 @@ All notable changes to clockit are documented here (newest date on top).
 - `/time` entry surface: fast logging form (no `<form>` — `onChange`/`onClick`; date/work-stream/hours/description/billable), **server-side rate snapshot** (`bill_rate`/`cost_rate` from the resource's defaults), and a current-week view grouped by day with weekly total; invoiced entries render read-only. The work-stream dropdown is server-curated (service role) to clients the resource has worked with.
 
 - **Creste editorial design system** (from the Claude Design "Creste Screens"): Instrument Serif / Archivo / IBM Plex Mono type, warm-paper palette tokens (`paper`/`card`/`oxblood`/`ink`/status accents), a shared `AppShell` (wordmark top-bar, section nav, user avatar, sign-out) and UI primitives (`Btn`, `StatusBadge`, `CardHeader`, `Label`). Design reference committed under `docs/design/`.
+- **`/entries`** — studio-wide (admin) / own (member) time-entries table with month nav + uninvoiced filter, admin Amount column, and period total.
+- **`/clients`** — admin clients & work-streams management: editorial list with budget bars, engagement badges, and inline create-client / create-work-stream forms (admin-guarded server actions). Added `work_streams.slug` (backfilled from names, ARCHITECTURE.md §12).
 
 ### Changed
 - Set Sean's resource `default_bill_rate` to ₪150 (matches the Glocod rate) so new `/time` entries snapshot correctly.
