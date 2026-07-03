@@ -6,8 +6,10 @@
 -- NOTE: partner@creste.dev is a placeholder — replace with the real second founder.
 insert into resources (email, role, name, title, cost_rate, default_bill_rate)
 values
-  ('sean@creste.dev',    'admin', 'Sean Dahan',           'Founding Partner', 150.00, 250.00),
-  ('partner@creste.dev', 'admin', 'Founding Partner Two', 'Founding Partner', 150.00, 250.00)
+  ('sean@creste.dev',    'admin',  'Sean Dahan',           'Founding Partner', 150.00, 250.00),
+  ('partner@creste.dev', 'admin',  'Founding Partner Two', 'Founding Partner', 150.00, 250.00),
+  -- One member resource so member-scoped RLS can be exercised (placeholder).
+  ('dev@creste.dev',     'member', 'Alex Member',          'Engineer',         100.00, 175.00)
 on conflict (email) do nothing;
 
 -- ── Demo client ──────────────────────────────────────────────────────────────
