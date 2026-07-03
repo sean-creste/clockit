@@ -1,0 +1,12 @@
+name = "clockit"
+main = ".open-next/worker.js"
+compatibility_date = "2025-05-05"
+compatibility_flags = ["nodejs_compat"]
+
+# Static assets emitted by the OpenNext build.
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+# Secrets/vars are NOT stored here (see ARCHITECTURE.md §10).
+# Local dev vars live in .dev.vars; production secrets via `wrangler secret put`.
