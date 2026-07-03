@@ -6,6 +6,10 @@ All notable changes to clockit are documented here (newest date on top).
 
 ### Added
 - Imported Sean's historical hours from the **TimeSheet** Google Sheet: client **Glocod** (ILS, hourly), 5 keyword-inferred work streams (Ingestion Engine, Meetings, Frontend, Data Sources, DevOps & Deploy), 9 monthly invoices (`CRESTE-2025-001/002`, `CRESTE-2026-001…007`, `issued`), and **253 `time_entries`** (951h, ₪142,650) with `bill_rate = cost_rate = ₪150` snapshotted and each stamped to its month's invoice. Idempotent SQL + provenance under `supabase/imports/`.
+- `/time` entry surface: fast logging form (no `<form>` — `onChange`/`onClick`; date/work-stream/hours/description/billable), **server-side rate snapshot** (`bill_rate`/`cost_rate` from the resource's defaults), and a current-week view grouped by day with weekly total; invoiced entries render read-only. The work-stream dropdown is server-curated (service role) to clients the resource has worked with.
+
+### Changed
+- Set Sean's resource `default_bill_rate` to ₪150 (matches the Glocod rate) so new `/time` entries snapshot correctly.
 
 ### Removed
 - Phase-3 RLS test artifacts (`CRESTE-2026-TEST` invoice + member test entries).
