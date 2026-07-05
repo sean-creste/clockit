@@ -12,7 +12,8 @@ All notable changes to clockit are documented here (newest date on top).
 - **`/entries`** — studio-wide (admin) / own (member) time-entries table with month nav + uninvoiced filter, admin Amount column, and period total.
 - **`/clients`** — admin clients & work-streams management: editorial list with budget bars, engagement badges, and inline create-client / create-work-stream forms (admin-guarded server actions). Added `work_streams.slug` (backfilled from names, ARCHITECTURE.md §12).
 - **`/invoices`** — admin invoices list with a month-to-date strip (billable / uninvoiced hours / outstanding), a **Generate** button wired to the new `generate_monthly_invoices()` SQL engine (ARCHITECTURE.md §4, service-role only), and status badges; rows link to detail.
-- **`/invoices/[id]`** — itemized invoice detail grouped by work stream → resource (hours · rate · amount), admin margin, and Download PDF / Email / Mark paid actions.
+- **`/invoices/[id]`** — itemized invoice detail grouped by work stream → resource (hours · rate · amount), admin margin, and Print/PDF / Email / Mark paid actions.
+- **`/invoices/[id]/print`** — branded, print-optimized invoice sheet (masthead with UBI/EIN placeholders per §7, meta grid, work-stream→resource line items, subtotal/total, remit footer); "Save as PDF / Print" via the browser. Chosen over `@react-pdf/renderer` because its `@noble/curves` dependency breaks the OpenNext/Workers build — the print-HTML route is Workers-compatible and renders with real fonts + the ₪ symbol.
 
 ### Changed
 - Set Sean's resource `default_bill_rate` to ₪150 (matches the Glocod rate) so new `/time` entries snapshot correctly.
