@@ -24,6 +24,18 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+@media print {
+  body {
+    background: #fff;
+  }
+  .no-print {
+    display: none !important;
+  }
+  @page {
+    margin: 14mm;
+  }
+}
+
 /* Editorial helpers */
 .font-display {
   font-family: var(--font-serif);

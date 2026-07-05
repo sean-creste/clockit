@@ -13,7 +13,7 @@ export function InvoiceActions({ id, status }: { id: string; status: string }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2.5 px-10 pb-4">
-      <Btn href={`/api/invoices/${id}/pdf`}>Download PDF</Btn>
+      <Btn href={`/invoices/${id}/print`}>Print / Save PDF</Btn>
       <Btn variant="accent" onClick={() => setMsg("Email sending isn't wired up yet.")}>
         Email to client
       </Btn>
