@@ -6,6 +6,7 @@ import { brand } from "@/lib/brand";
 import { money, hoursLabel } from "@/lib/format";
 import { Btn, CardHeader, StatusBadge, Label } from "@/components/ui";
 import { createClientRecord, createWorkStream } from "./actions";
+import { POPanel, type PO } from "./po-panel";
 
 type Stream = {
   id: string;
@@ -26,6 +27,7 @@ type Client = {
   retainerAmount: number | null;
   active: boolean;
   streams: Stream[];
+  pos: PO[];
 };
 
 const inputStyle: React.CSSProperties = {
@@ -296,6 +298,8 @@ export function ClientsAdmin({ clients }: { clients: Client[] }) {
               </div>
             ))}
           </div>
+
+          <POPanel clientId={c.id} currency={c.currency} pos={c.pos} />
         </div>
       ))}
     </div>
