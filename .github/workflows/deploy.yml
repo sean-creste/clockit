@@ -28,13 +28,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
-      - name: Upgrade npm to match the lockfile
-        run: npm i -g npm@latest
-
+      # `npm install` (not `npm ci`) so Linux-only optional native deps are
+      # resolved on the runner — the lockfile was generated on macOS and omits
+      # them, which makes `npm ci` fail on the CI platform.
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       # Server-only secret the Worker reads at runtime (never inlined).
       - name: Set Worker runtime secret (service role)
