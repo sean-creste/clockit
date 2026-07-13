@@ -2,6 +2,11 @@
 
 All notable changes to clockit are documented here (newest date on top).
 
+## 2026-07-13
+
+### Added
+- **CI/CD**: GitHub Actions workflow (`.github/workflows/deploy.yml`) that builds and deploys to Cloudflare Workers on every push to `main` (i.e. on merge). Requires repo secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+
 ## 2026-07-07
 
 ### Added
