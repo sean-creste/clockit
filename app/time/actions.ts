@@ -10,6 +10,7 @@ export type AddEntryInput = {
   hours: number;
   description: string;
   billable: boolean;
+  poId?: string | null;
 };
 
 // Insert a time entry, snapshotting bill_rate + cost_rate from the caller's
@@ -42,12 +43,25 @@ export async function addEntry(input: AddEntryInput): Promise<{ error?: string }
   // Validate the stream is active and belongs to an active client.
   const { data: stream } = await admin
     .from("work_streams")
-    .select("id, active, clients(active)")
+    .select("id, active, client_id, clients(active)")
     .eq("id", input.workStreamId)
     .maybeSingle();
   const clientActive = (stream?.clients as { active?: boolean } | null)?.active;
   if (!stream || !stream.active || !clientActive)
     return { error: "That work stream is not available." };
+
+  // PO rule: if the client has any active PO, an entry must reference one.
+  const clientId = (stream as { client_id?: string }).client_id;
+  const { data: activePos } = await admin
+    .from("purchase_orders")
+    .select("id")
+    .eq("client_id", clientId)
+    .eq("status", "active");
+  const poIds = (activePos ?? []).map((p) => p.id as string);
+  if (poIds.length > 0 && !input.poId)
+    return { error: "This client requires a PO — pick one." };
+  if (input.poId && !poIds.includes(input.poId))
+    return { error: "That PO isn't valid for this client." };
 
   const { error } = await admin.from("time_entries").insert({
     resource_id: resource.id,
@@ -59,6 +73,7 @@ export async function addEntry(input: AddEntryInput): Promise<{ error?: string }
     cost_rate: resource.cost_rate, // SNAPSHOT
     billable: input.billable,
     invoice_id: null,
+    po_id: input.poId || null,
     created_by: user.id,
   });
   if (error) return { error: error.message };

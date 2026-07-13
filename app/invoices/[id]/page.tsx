@@ -43,10 +43,17 @@ export default async function InvoiceDetail({
 
   const { data: entries } = await admin
     .from("time_entries")
-    .select("hours, bill_rate, cost_rate, work_streams(name), resources(name)")
+    .select("hours, bill_rate, cost_rate, work_streams(name), resources(name), purchase_orders(po_number)")
     .eq("invoice_id", id);
 
   const { groups, totalHours, totalAmount, totalCost } = buildInvoiceGroups(entries ?? []);
+  const poNumbers = [
+    ...new Set(
+      (entries ?? [])
+        .map((e) => (e.purchase_orders as { po_number?: string } | null)?.po_number)
+        .filter(Boolean) as string[],
+    ),
+  ];
   const currency = (inv.currency as string) ?? "USD";
   const client = (inv.clients as { name?: string } | null)?.name ?? "";
   const margin = totalAmount - totalCost;
@@ -81,6 +88,11 @@ export default async function InvoiceDetail({
             <div>
               Issued {d(inv.issue_date as string, { month: "short", day: "numeric" })} · Due {d(inv.due_date as string, { month: "short", day: "numeric" })}
             </div>
+            {poNumbers.length > 0 && (
+              <div>
+                PO <span style={{ color: brand.ink }}>{poNumbers.join(", ")}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

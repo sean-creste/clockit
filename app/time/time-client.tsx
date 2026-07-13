@@ -7,7 +7,8 @@ import { brand } from "@/lib/brand";
 import { hoursLabel, money } from "@/lib/format";
 import { addEntry } from "./actions";
 
-type Stream = { id: string; name: string; clientName: string };
+type Stream = { id: string; name: string; clientId: string; clientName: string };
+type Po = { id: string; poNumber: string };
 type Entry = {
   id: string;
   hours: number;
@@ -18,6 +19,7 @@ type Entry = {
   clientName: string;
   currency: string;
   billRate: number;
+  poNumber: string | null;
 };
 
 export function TimeDay({
@@ -30,6 +32,7 @@ export function TimeDay({
   dayTotal,
   entries,
   streams,
+  poByClient,
   isAdmin,
 }: {
   day: string;
@@ -41,6 +44,7 @@ export function TimeDay({
   dayTotal: number;
   entries: Entry[];
   streams: Stream[];
+  poByClient: Record<string, Po[]>;
   isAdmin: boolean;
 }) {
   const router = useRouter();
@@ -49,6 +53,11 @@ export function TimeDay({
   const [streamId, setStreamId] = useState(streams[0]?.id ?? "");
   const [description, setDescription] = useState("");
   const [hours, setHours] = useState("");
+  const [poId, setPoId] = useState("");
+
+  const selectedStream = streams.find((s) => s.id === streamId);
+  const clientPos = selectedStream ? poByClient[selectedStream.clientId] ?? [] : [];
+  const poRequired = clientPos.length > 0;
 
   const grid = isAdmin
     ? "180px 1fr 70px 90px 44px"
@@ -59,6 +68,7 @@ export function TimeDay({
     const h = Number(hours);
     if (!streamId) return setMsg("Pick a work stream.");
     if (!(h > 0 && h <= 24)) return setMsg("Hours must be between 0 and 24.");
+    if (poRequired && !poId) return setMsg("This client requires a PO — pick one.");
     start(async () => {
       const res = await addEntry({
         entryDate: day,
@@ -66,11 +76,13 @@ export function TimeDay({
         hours: h,
         description,
         billable: true,
+        poId: poId || null,
       });
       if (res?.error) setMsg(res.error);
       else {
         setHours("");
         setDescription("");
+        setPoId("");
         router.refresh();
       }
     });
@@ -171,6 +183,11 @@ export function TimeDay({
             <div>
               <div style={{ fontSize: 12.5, fontWeight: 500 }}>{e.clientName}</div>
               <div style={{ fontSize: 11, color: brand.oxblood, marginTop: 2 }}>{e.streamName}</div>
+              {e.poNumber && (
+                <div style={{ fontSize: 10, color: "rgba(26,26,26,.45)", fontFamily: "var(--font-plex)", marginTop: 1 }}>
+                  PO {e.poNumber}
+                </div>
+              )}
             </div>
             <div style={{ fontSize: 12.5, color: "rgba(26,26,26,.7)", lineHeight: 1.45 }}>
               {e.description || <span style={{ color: "rgba(26,26,26,.35)" }}>—</span>}
@@ -229,7 +246,10 @@ export function TimeDay({
       >
         <select
           value={streamId}
-          onChange={(e) => setStreamId(e.target.value)}
+          onChange={(e) => {
+            setStreamId(e.target.value);
+            setPoId("");
+          }}
           style={{
             fontSize: 12,
             background: "transparent",
@@ -292,6 +312,39 @@ export function TimeDay({
           </button>
         </div>
       </div>
+
+      {poRequired && (
+        <div
+          className="flex items-center gap-2 px-9 py-2"
+          style={{ background: "rgba(74,14,28,.02)", borderTop: "1px solid rgba(26,26,26,.06)" }}
+        >
+          <span className="uppercase" style={{ fontSize: 10, letterSpacing: ".1em", color: "rgba(26,26,26,.45)" }}>
+            PO
+          </span>
+          <select
+            value={poId}
+            onChange={(e) => setPoId(e.target.value)}
+            style={{
+              fontSize: 12,
+              background: "#fff",
+              border: "1px solid rgba(26,26,26,.2)",
+              borderRadius: 5,
+              padding: "6px 8px",
+              color: brand.ink,
+            }}
+          >
+            <option value="">Select PO…</option>
+            {clientPos.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.poNumber}
+              </option>
+            ))}
+          </select>
+          <span style={{ fontSize: 10.5, color: brand.open }}>
+            required for {selectedStream?.clientName}
+          </span>
+        </div>
+      )}
 
       {msg && (
         <div className="px-9 py-3 text-sm" style={{ color: brand.open }}>

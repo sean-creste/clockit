@@ -42,10 +42,17 @@ export default async function InvoicePrint({ params }: { params: Promise<{ id: s
 
   const { data: entries } = await admin
     .from("time_entries")
-    .select("hours, bill_rate, cost_rate, work_streams(name), resources(name)")
+    .select("hours, bill_rate, cost_rate, work_streams(name), resources(name), purchase_orders(po_number)")
     .eq("invoice_id", id);
 
   const { groups } = buildInvoiceGroups(entries ?? []);
+  const poNumbers = [
+    ...new Set(
+      (entries ?? [])
+        .map((e) => (e.purchase_orders as { po_number?: string } | null)?.po_number)
+        .filter(Boolean) as string[],
+    ),
+  ];
   const currency = (inv.currency as string) ?? "USD";
   const client = inv.clients as { name?: string; payment_terms_days?: number } | null;
   const terms = client?.payment_terms_days ?? 30;
@@ -108,6 +115,11 @@ export default async function InvoicePrint({ params }: { params: Promise<{ id: s
             <div>
               Terms <span style={{ color: brand.ink }}>Net-{terms} · {currency}</span>
             </div>
+            {poNumbers.length > 0 && (
+              <div>
+                PO <span style={{ color: brand.ink }}>{poNumbers.join(", ")}</span>
+              </div>
+            )}
           </div>
         </div>
 

@@ -20,22 +20,40 @@ export default async function ClientsPage() {
   if (!resource) redirect("/");
   if (resource.role !== "admin") redirect("/time");
 
-  const [{ data: clients }, { data: streams }, { data: te }] = await Promise.all([
-    admin
-      .from("clients")
-      .select("id, name, currency, engagement, payment_terms_days, billing_email, retainer_amount, active")
-      .order("name"),
-    admin
-      .from("work_streams")
-      .select("id, client_id, name, slug, budget_hours, budget_amount, active")
-      .order("name"),
-    admin.from("time_entries").select("work_stream_id, hours"),
-  ]);
+  const [{ data: clients }, { data: streams }, { data: te }, { data: pos }, { data: docs }] =
+    await Promise.all([
+      admin
+        .from("clients")
+        .select("id, name, currency, engagement, payment_terms_days, billing_email, retainer_amount, active")
+        .order("name"),
+      admin
+        .from("work_streams")
+        .select("id, client_id, name, slug, budget_hours, budget_amount, active")
+        .order("name"),
+      admin.from("time_entries").select("work_stream_id, hours, po_id, bill_rate"),
+      admin
+        .from("purchase_orders")
+        .select("id, client_id, po_number, description, amount, currency, status, issue_date, expiry_date")
+        .order("created_at", { ascending: false }),
+      admin
+        .from("po_documents")
+        .select("id, po_id, name, path, size_bytes")
+        .order("created_at", { ascending: true }),
+    ]);
 
   const logged = new Map<string, number>();
+  const billedByPo = new Map<string, number>();
   for (const t of te ?? []) {
-    const k = t.work_stream_id as string;
-    logged.set(k, (logged.get(k) ?? 0) + Number(t.hours));
+    logged.set(
+      t.work_stream_id as string,
+      (logged.get(t.work_stream_id as string) ?? 0) + Number(t.hours),
+    );
+    if (t.po_id) {
+      billedByPo.set(
+        t.po_id as string,
+        (billedByPo.get(t.po_id as string) ?? 0) + Number(t.hours) * Number(t.bill_rate),
+      );
+    }
   }
 
   const data = (clients ?? []).map((c) => ({
@@ -57,6 +75,27 @@ export default async function ClientsPage() {
         budgetAmount: s.budget_amount as number | null,
         active: Boolean(s.active),
         logged: logged.get(s.id as string) ?? 0,
+      })),
+    pos: (pos ?? [])
+      .filter((p) => p.client_id === c.id)
+      .map((p) => ({
+        id: p.id as string,
+        poNumber: p.po_number as string,
+        description: (p.description as string) ?? "",
+        amount: p.amount as number | null,
+        currency: (p.currency as string) ?? ((c.currency as string) ?? "USD"),
+        status: p.status as string,
+        issueDate: p.issue_date as string | null,
+        expiryDate: p.expiry_date as string | null,
+        billed: billedByPo.get(p.id as string) ?? 0,
+        documents: (docs ?? [])
+          .filter((d) => d.po_id === p.id)
+          .map((d) => ({
+            id: d.id as string,
+            name: d.name as string,
+            path: d.path as string,
+            sizeBytes: d.size_bytes as number | null,
+          })),
       })),
   }));
 
