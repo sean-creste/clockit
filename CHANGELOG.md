@@ -2,6 +2,14 @@
 
 All notable changes to clockit are documented here (newest date on top).
 
+## 2026-07-07
+
+### Added
+- **Purchase orders + signed agreements**: `purchase_orders` + `po_documents` tables and `time_entries.po_id` (migration). A PO belongs to a client, carries an authorized `amount` (burn-down), and can hold multiple signed-agreement files in a **private `agreements` Supabase Storage bucket**.
+  - `/clients` — per-client **PO panel**: list POs (number · status · burn-down vs amount · dates), **Add PO**, and **upload / open** signed agreements (service-role upload + short-lived signed URLs).
+  - `/time` — **PO dropdown** scoped to the selected client's active POs; **required when that client has an active PO**; the PO shows on each entry.
+  - Invoice detail + print show the referenced **PO number(s)**.
+
 ## 2026-07-03
 
 ### Added

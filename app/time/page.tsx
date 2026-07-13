@@ -67,14 +67,32 @@ export default async function TimePage({
     .map((s) => ({
       id: s.id as string,
       name: s.name as string,
+      clientId: s.client_id as string,
       clientName: (s.clients as { name?: string } | null)?.name ?? "",
     }))
     .sort((a, b) => (a.clientName + a.name).localeCompare(b.clientName + b.name));
 
+  // Active POs per worked-with client (for the entry PO dropdown).
+  const workedArr = [...workedClientIds];
+  const poByClient: Record<string, { id: string; poNumber: string }[]> = {};
+  if (workedArr.length) {
+    const { data: poRows } = await admin
+      .from("purchase_orders")
+      .select("id, po_number, client_id")
+      .eq("status", "active")
+      .in("client_id", workedArr);
+    for (const p of poRows ?? []) {
+      (poByClient[p.client_id as string] ??= []).push({
+        id: p.id as string,
+        poNumber: p.po_number as string,
+      });
+    }
+  }
+
   // Entries for the selected day.
   const { data: rows } = await admin
     .from("time_entries")
-    .select("id, hours, description, billable, invoice_id, bill_rate, work_streams(name, clients(name, currency))")
+    .select("id, hours, description, billable, invoice_id, bill_rate, work_streams(name, clients(name, currency)), purchase_orders(po_number)")
     .eq("resource_id", resource.id)
     .eq("entry_date", day)
     .order("created_at", { ascending: true });
@@ -93,6 +111,7 @@ export default async function TimePage({
       clientName: ws?.clients?.name ?? "",
       currency: ws?.clients?.currency ?? "USD",
       billRate: Number(r.bill_rate),
+      poNumber: (r.purchase_orders as { po_number?: string } | null)?.po_number ?? null,
     };
   });
 
@@ -111,6 +130,7 @@ export default async function TimePage({
         dayTotal={dayTotal}
         entries={entries}
         streams={streams}
+        poByClient={poByClient}
         isAdmin={role === "admin"}
       />
     </AppShell>
